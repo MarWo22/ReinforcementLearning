@@ -11,28 +11,31 @@ class Strategy(Enum):
 
 class Agent:
     
-    def __init__(self, k, strategy, epsilon = 0.3):
+    def __init__(self, k, strategy, epsilon = 0.1, c = 0.1, alpha = 0.1, optimistic_value = 6):
         self.k = k
         self.strategy = strategy
-        self.q_t = [0] * k
+
+        if strategy == Strategy.OPTIMISTIC_INITIAL_VALUE:
+            self.q_t = [optimistic_value] * k
+        else:   
+            self.q_t = [0] * k
         self.actions_taken = [0] * k
+        self.h_t = [0] * k
         self.epsilon = epsilon
-
+        self.c = c
+        self.pi_t = [0] * k
+        self.alpha = alpha
         self.rewards_received = []
-        self.q_t_base = self.q_t.copy()
-        self.actions_taken_base = self.actions_taken.copy()
-
-
+        self.average_rewards = 0
+        self.epoch = 0
     
     def greedy(self):
         return np.argmax(self.q_t)
 
     def epsilon_greedy(self):
-        # Generate random digit [0-1]
-        random_int = random.random()
 
         # Take a random action if that random value is lower or equal than epsilon
-        if random_int <= self.epsilon:
+        if random.random() <= self.epsilon:
             return random.randint(0, self.k - 1)
 
         return np.argmax(self.q_t)
@@ -41,10 +44,30 @@ class Agent:
         return np.argmax(self.q_t)
 
     def upper_confidence_bound(self):
-        pass
+
+        max_val = 0 
+        max_idx = 0
+
+        for i in range(self.k):
+            val = self.q_t[i]
+            # Calculate the uncertainty and add them to the value
+            # If the action has not been taken before, the uncertainty is infinite, so it is set to high number
+            if self.actions_taken[i] != 0:
+                val += self.c * np.sqrt(np.log(self.epoch) / self.actions_taken[i])
+            else:
+                val += 10000
+            
+            if val > max_val:
+                max_val = val
+                max_idx = i
+
+        return max_idx
 
     def action_preference(self):
-        pass
+        exp =  np.exp(self.h_t)
+        self.pi_t = exp/np.sum(exp)
+        # Selects a random index based on the probability
+        return np.random.choice(a=range(len(self.pi_t)), p=self.pi_t)
 
     # take_action returns the action of the agent using the strategy it was initialized with
     # A user should only use this function, unless they want to use a different strategy than it was initialized with,
@@ -65,18 +88,20 @@ class Agent:
                 print("Unkown strategy")
 
 
-    def reward(self, action, reward):
-        sum_rewards = self.q_t[action] * self.actions_taken[action]
-        self.q_t[action] = (sum_rewards + reward) / (self.actions_taken[action] + 1)
-        self.actions_taken[action]  = self.actions_taken[action] + 1
+    def reward(self, action, reward, is_optimal):
+        
+        if self.strategy == Strategy.ACTION_PREFERENCE:
+            if is_optimal:
+                self.h_t[action] = self.h_t[action] + self.alpha * (reward - self.average_rewards) * (1 - self.pi_t[action])
+            else:
+                self.h_t[action] = self.h_t[action] - self.alpha * (reward - self.average_rewards) * self.pi_t[action]
+        else:
+            self.q_t[action] = self.q_t[action] + (1 / (self.actions_taken[action] + 1)) * (reward - self.q_t[action])
+            self.actions_taken[action]  = self.actions_taken[action] + 1
 
         self.rewards_received.append(reward)
-
-    # This function can be used to reset the agents internal representation back to the basic value
-    def reset(self):
-        self.q_t = self.q_t_base.copy()
-        self.actions_taken = self.actions_taken_base.copy()
-        self.rewards_received = []
+        self.average_rewards = (self.average_rewards * self.epoch + reward) / (self.epoch + 1)
+        self.epoch += 1
 
     def get_reward_history(self):
         return np.array(self.rewards_received)
