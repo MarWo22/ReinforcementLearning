@@ -11,27 +11,34 @@ class Strategy(Enum):
 
 class Agent:
     
-    def __init__(self, k, strategy, epsilon = 0.1, c = 0.1, alpha = 0.1, optimistic_value = 6):
+    # Initializes the agents with its hyperparameters
+    def __init__(self, k, strategy, epsilon = 0.1, c = 0.1, alpha = 0.1, optimistic_value = 10):
+        # Hyper parameters, all are initialized but only the ones related to the strategy are used
         self.k = k
         self.strategy = strategy
+        self.epsilon = epsilon
+        self.c = c
+        self.alpha = alpha
 
+        # Internal representations of policies/expected rewards
         if strategy == Strategy.OPTIMISTIC_INITIAL_VALUE:
             self.q_t = [optimistic_value] * k
         else:   
             self.q_t = [0] * k
-        self.actions_taken = [0] * k
-        self.h_t = [0] * k
-        self.epsilon = epsilon
-        self.c = c
         self.pi_t = [0] * k
-        self.alpha = alpha
+        self.h_t = [0] * k
+
+        # Other needed internal values
         self.rewards_received = []
         self.average_rewards = 0
         self.epoch = 0
+        self.actions_taken = [0] * k
     
+    # Uses Greedy to select an action
     def greedy(self):
         return np.argmax(self.q_t)
 
+    # Uses Epsilon Greedy to select an action
     def epsilon_greedy(self):
 
         # Take a random action if that random value is lower or equal than epsilon
@@ -40,9 +47,11 @@ class Agent:
 
         return np.argmax(self.q_t)
 
+    # Uses Optimistic Initial Value to select an action
     def optimistic_initial_value(self):
         return np.argmax(self.q_t)
 
+    # Uses Upper Confidence Bound to select an action
     def upper_confidence_bound(self):
 
         max_val = 0 
@@ -63,6 +72,7 @@ class Agent:
 
         return max_idx
 
+    # Used Action Preference to select an action
     def action_preference(self):
         exp =  np.exp(self.h_t)
         self.pi_t = exp/np.sum(exp)
@@ -84,24 +94,26 @@ class Agent:
                 return self.upper_confidence_bound()
             case Strategy.ACTION_PREFERENCE:
                 return self.action_preference()
-            case _:
-                print("Unkown strategy")
 
-
-    def reward(self, action, reward, is_optimal):
+    # Rewards the agent for its action
+    def reward_agent(self, action, reward, is_optimal):
         
+        # Update h_t if the strategy is action preference
         if self.strategy == Strategy.ACTION_PREFERENCE:
             if is_optimal:
                 self.h_t[action] = self.h_t[action] + self.alpha * (reward - self.average_rewards) * (1 - self.pi_t[action])
             else:
                 self.h_t[action] = self.h_t[action] - self.alpha * (reward - self.average_rewards) * self.pi_t[action]
+        # Otherwise q_t is updated
         else:
             self.q_t[action] = self.q_t[action] + (1 / (self.actions_taken[action] + 1)) * (reward - self.q_t[action])
-            self.actions_taken[action]  = self.actions_taken[action] + 1
+            self.actions_taken[action]  += 1
 
+        # Keep track of the rewards the agent received and the average reward
         self.rewards_received.append(reward)
         self.average_rewards = (self.average_rewards * self.epoch + reward) / (self.epoch + 1)
         self.epoch += 1
 
+    # Returns all rewards the agent has received
     def get_reward_history(self):
         return np.array(self.rewards_received)
