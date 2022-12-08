@@ -2,7 +2,6 @@ import environment
 import agent
 import simulation
 from matplotlib import pyplot as plt
-import numpy as np
 
 
 # Main function that starts the simulation, runs an experiment for all strategies, and plots the average rewards and optimal action percentages

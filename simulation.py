@@ -40,6 +40,6 @@ class Simulation:
             correct_actions += action_history
 
         # Gets the average of the rewards and correct action history array
-        rewards /= self.epochs
-        correct_actions /= self.epochs
+        rewards /= self.iterations
+        correct_actions /= self.iterations
         return rewards, correct_actions
