@@ -11,7 +11,7 @@ class Simulation:
         # Hyper parameters
         self.k = 6
         self.epsilon = 0.1
-        self.c = 0.1
+        self.c = 0.3
         self.optimistic_value = 10
         self.alpha = 0.1
 
@@ -41,5 +41,6 @@ class Simulation:
 
         # Gets the average of the rewards and correct action history array
         rewards /= self.iterations
-        correct_actions /= self.iterations
+        correct_actions /= self.iterations 
+        correct_actions *= 100 # Multiply by 100 to get percentages
         return rewards, correct_actions
