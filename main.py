@@ -1,47 +1,69 @@
-import environment
-import agent
-import simulation
-from matplotlib import pyplot as plt
+from board import Board
+from agent import Agent
+import numpy as np
+import matplotlib.pyplot as plt
 
+# We represent states as a dictionary, where each state is an entry
+state_values = dict()
 
-# Main function that starts the simulation, runs an experiment for all strategies, and plots the average rewards and optimal action percentages
-# Hyper parameters can be found in Simulation and altered there
-# To run the simulation for different problem types, change problem_type_to_run
 def main():
-    simulation_instance = simulation.Simulation()
+    results = list()
+    for i in range(100000):
+        #print("running", i)
+        results.append(play_game())
 
-    # Change to use Guassian or Bernouli
-    problem_type_to_run = environment.ProblemType.BERNOULI
+    averages = list()
+    for i in range(1000):
+        averages.append(sum(results[i*100: (i+1)*100]) / len(results[i*100: (i+1)*100]))
 
-    # Run the experiment for each strategy
-    rewards_greedy, actions_greedy = simulation_instance.run_experiment(agent.Strategy.GREEDY, problem_type_to_run)
-    rewards_epsilon, actions_epsilon = simulation_instance.run_experiment(agent.Strategy.EPSILON_GREEDY, problem_type_to_run)
-    rewards_optimistic, actions_optimistic = simulation_instance.run_experiment(agent.Strategy.OPTIMISTIC_INITIAL_VALUE, problem_type_to_run)
-    rewards_ucb, actions_ucb = simulation_instance.run_experiment(agent.Strategy.UPPER_CONFIDENCE_BOUND, problem_type_to_run)
-    rewards_preference, actions_preference = simulation_instance.run_experiment(agent.Strategy.ACTION_PREFERENCE, problem_type_to_run)
-    
-    # Plot the rewards and correct action trajectory 
-    plt.subplot(1, 2, 1)
-    plt.plot(rewards_greedy, label="Greedy")
-    plt.plot(rewards_epsilon, label="Epsilon Greedy")
-    plt.plot(rewards_optimistic, label="Optimistic Initial Value")
-    plt.plot(rewards_ucb, label="Upper Bound Confidence")
-    plt.plot(rewards_preference, label="Action Preference")
-    plt.title("Average rewards gained through time")
-    plt.legend()
-
-    plt.subplot(1, 2, 2)
-    plt.plot(actions_greedy, label="Greedy")
-    plt.plot(actions_epsilon, label="Epsilon Greedy")
-    plt.plot(actions_optimistic, label="Optimistic Initial Value")
-    plt.plot(actions_ucb, label="Upper Bound Confidence")
-    plt.plot(actions_preference, label="Action Preference")
-    plt.title("Percentage of optimal actions taken through time")
-    plt.legend()
-
+    plt.plot(averages)
     plt.show()
 
+def play_game():
+    board = Board('8/8/8/2k5/8/2K3Q1/8/8')
+    agent1 = Agent()
+    agent2 = Agent()
 
+    agent1_actions = list()
+    agent2_actions = list()
+    agent_1_won = 0
+
+    while True:
+        outcome = agent1.make_move(board, state_values)
+        if outcome is not None:
+            if outcome.winner:
+                print("agent 1 won")
+                agent_1_won = 1
+                agent1_actions.append((board.fen_state(), 1))
+                agent2_actions.append((board.fen_state(), -1))
+            else:
+                print("draw")
+                agent1_actions.append((board.fen_state(), -0.1))
+                agent2_actions.append((board.fen_state(), -0.1))
+            #board.printBoard()
+            break
+
+        agent1_actions.append((board.fen_state(), 0))
+
+
+        outcome = agent2.make_move(board, state_values)
+        if outcome is not None:
+            if outcome.winner:
+                print("agent 2 won")
+                agent1_actions.append((board.fen_state(), -1))
+                agent2_actions.append((board.fen_state(), 1))
+            else:
+                print("draw")
+                agent1_actions.append((board.fen_state(), -0.1))
+                agent2_actions.append((board.fen_state(), -0.1))
+            #board.printBoard()
+            break
+
+        agent2_actions.append((board.fen_state(), 0))
+
+    agent1.update_state_values(state_values, agent1_actions)
+    agent2.update_state_values(state_values, agent2_actions)
+    return agent_1_won
 
 if __name__ == "__main__":
     main()
