@@ -70,17 +70,28 @@ class Board:
         return board
 
     # Returns the legal moves the current color can make
-    def legalMoves(self) -> chess.LegalMoveGenerator:
+    def legal_moves(self) -> chess.LegalMoveGenerator:
         return self.board.legal_moves
 
     # Makes the given move and returns the outcome
-    def makeMove(self, move) -> chess.Outcome:
+    def make_move(self, move) -> chess.Outcome:
         self.board.push(move)
         return self.board.outcome()
 
     # Prints the board to the terminal
-    def printBoard(self):
+    def print_board(self):
         print(self.board)
+
+    def kings_distance(self):
+        white_king_pos = self.board.pieces(6, True).pop()
+        black_king_pos = self.board.pieces(6, False).pop()
+        return chess.square_distance(white_king_pos, black_king_pos)
+
+    def black_king_border_distance(self):
+        black_king_pos = self.board.pieces(6, True).pop()
+        black_king_file = chess.square_file(black_king_pos)
+        black_king_rank = chess.square_rank(black_king_pos)
+        return min(7-black_king_file, 7+black_king_file, 7+black_king_rank, 7-black_king_rank)
     
     def get_next_fen_state(self, action) -> str:
         self.board.push(action)
