@@ -1,32 +1,46 @@
 import chess
+from board import Board
 from agent import Agent
 import matplotlib.pyplot as plt
 
 
 def main():
-    agents = (Agent(1), Agent(-1))
-    for i in range(1000):
-        play_game(agents)
-    print(agents[0].q_values())
+    agent = Agent()
+    outcomes = list()
+    for _ in range(5000):
+        outcomes.append(play_game(agent))
+        agent.visited = []
+    print(sum(outcomes) / len(outcomes))
+    q_values = agent.q_values
+    board = Board('8/8/8/2k5/8/6R1/3K4/8')
+    board.print_board()
+    result = "*"
+    while result == "*":
+        state = board.state()
+        if state[1] == chess.WHITE:
+            move = max(q_values[state], key=q_values[state].get)
+        else:
+            move = min(q_values[state], key=q_values[state].get)
+        result = board.make_move(move)
+        board.print_board()
+        
+    print(result)
 
 
-def play_game(agents):
-    board = chess.Board('8/8/8/2k5/8/2K3Q1/8/8')
 
-    idx = 0
+
+
+def play_game(agent):
+    board = Board('8/8/8/2k5/8/6R1/3K4/8')
     while True:
-        outcome1 = agents[idx % 2].make_move(board)
-        outcome2 = agents[idx % 2].make_move(board)
-        #print(board)
-        if outcome1 != '*':
-            if outcome1 == "1/2-1/2":
-                print("draw")
-            else:
-                print("white won")
-                print(board)
-            break
-
-        idx+=1
+        result = agent.play_turn(board)
+        if result == "1-0":
+            print("White won")
+            return 1
+        elif result == "1/2-1/2":
+            print("Draw")
+            return 0
+   
 
 
 if __name__ == "__main__":
