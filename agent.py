@@ -2,12 +2,11 @@ import chess
 import random
 
 class Agent:
-    def __init__(self):
-        self.alpha = 0.5
-        self.epsilon = 0.1
-        self.gamma = 0.95
+    def __init__(self, alpha, epsilon, gamma):
+        self.alpha = alpha
+        self.epsilon = epsilon
+        self.gamma = gamma
         self.q_values = {}
-        self.visited = []
 
     def play_turn(self, board) -> str:
         curr_state = board.state()
@@ -19,7 +18,6 @@ class Agent:
         outcome = board.make_move(move)
         reward = self._get_reward(board, outcome)
         self._update_q_values(board, curr_state, move, reward)
-        self.visited.append(board.state())
         return outcome
 
     
@@ -51,21 +49,7 @@ class Agent:
         elif outcome == "1-0":
             return 100
         else:
-            return 10 - (board.kings_distance() + board.black_king_border_distance())
-
-        if outcome == "*": # Game still going on
-            if color == chess.WHITE:
-                return -1 # -1 reward for WHITE, since he wants to checkmate as fast as possible
-            else:
-                return 1 # 1 reward for BLACK, since he wants to delay the checkmate as long as possible
-
-        elif outcome == "1-0": # WHITE won
-            return 100 # Only achievable if WHITE is at play, returns high reward
-        elif outcome == "1/2-1/2": # draw
-            if color == chess.WHITE:
-                return -100 # -100 reward for WHITE, since he needs (and can) win
-            else:
-                return 100 # 100 reward for BLACK, since he wants to draw (which should be impossible)
+            return (10 - (board.kings_distance() + board.black_king_border_distance())) / 10
 
     def _get_move(self, board) -> chess.Move:
 
@@ -85,7 +69,5 @@ class Agent:
             else:
                 return min(self.q_values[state], key=self.q_values[state].get)
 
-    def get_q_values(self):
-        return self.q_values
-
-
+    def decay_epsilon(self, decay_factor):
+        self.epsilon *= decay_factor
