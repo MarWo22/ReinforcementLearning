@@ -1,11 +1,12 @@
 import chess
+import random
 
 # A wrapper class for the chess class with added functionalities.
 # Initially created to also generate random endgame positions to train on, but due to time limitations we did not manage to finish this
 class Board:
     # Creates a new board with the given position. If the position is left empty, a random endgame board is generated
-    def __init__(self, position) -> None:
-            self.board = chess.Board(position)
+    def __init__(self) -> None:
+            self.board = chess.Board(random.choice(["8/8/8/2k5/8/6R1/3K4/8", "8/8/8/2k5/8/2K3Q1/8/8"]))
 
     # Returns the legal moves the current color can make
     def legal_moves(self) -> list:
@@ -39,9 +40,4 @@ class Board:
         return fen
 
     def state(self) -> tuple:
-        return (self.board.board_fen(), self.board.turn)
-
-    def get_game_ended(self) -> bool:
-        return self.board.is_game_over()
-
-    
+        return (self.board.board_fen(), self.board.turn)    

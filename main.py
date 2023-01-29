@@ -1,48 +1,48 @@
-import chess
-from board import Board
 from agent import Agent
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import savgol_filter
 
 num_workers = mp.cpu_count()  
 
 def main():
-    compare_decay_factors()
+    compare_to_random_agent(epochs=25000)
 
-def compare_hyper_parameters():
-    hp_1 = run_experiment(0.1, 0.1, 0.95)
-    hp_2 = run_experiment(0.2, 0.1, 0.95)
-    hp_3 = run_experiment(0.4, 0.2, 0.95)
-    hp_4 = run_experiment(0.1, 0.05, 0.9)
-    hp_5 = run_experiment(0.2, 0.2, 0.9)
-    hp_6 = run_experiment(0.2, 0.1, 0.9)
+def compare_hyper_parameters(epochs=10000):
+    hp_1 = run_experiment(0.1, 0.05, 0.99, epochs=epochs)
+    hp_2 = run_experiment(0.2, 0.1, 0.99, epochs=epochs)
+    hp_3 = run_experiment(0.5, 0.2, 0.95, epochs=epochs)
+    hp_4 = run_experiment(0.1, 0.1, 0.95, epochs=epochs)
+    hp_5 = run_experiment(0.2, 0.05, 0.90, epochs=epochs)
+    hp_6 = run_experiment(0.5, 0.2, 0.90, epochs=epochs)
 
     # Applying savgol filter to smooth out the graph a little.
-    plt.plot(savgol_filter(hp_1, 51, 3), label="alpha=0.1, epsilon=0.1, gamma=0.95")
-    plt.plot(savgol_filter(hp_2, 51, 3), label="alpha=0.2, epsilon=0.1, gamma=0.95")
-    plt.plot(savgol_filter(hp_3, 51, 3), label="alpha=0.4, epsilon=0.2, gamma=0.95")
-    plt.plot(savgol_filter(hp_4, 51, 3), label="alpha=0.1, epsilon=0.05, gamma=0.9")
-    plt.plot(savgol_filter(hp_5, 51, 3), label="alpha=0.2, epsilon=0.2, gamma=0.9")
-    plt.plot(savgol_filter(hp_6, 51, 3), label="alpha=0.2, epsilon=0.1, gamma=0.9")
+    plt.plot(hp_1, label="alpha=0.1, epsilon=0.05, gamma=0.99")
+    plt.plot(hp_2, label="alpha=0.2, epsilon=0.1, gamma=0.99")
+    plt.plot(hp_3, label="alpha=0.5, epsilon=0.2, gamma=0.95")
+    plt.plot(hp_4, label="alpha=0.1, epsilon=0.1, gamma=0.95")
+    plt.plot(hp_5, label="alpha=0.2, epsilon=0.05, gamma=0.90")
+    plt.plot(hp_6, label="alpha=0.5, epsilon=0.2, gamma=0.90")
     plt.legend()
     plt.title("Winrate of different hyperparameters")
     plt.xlabel("Game Number")
     plt.ylabel("Winrate %")
     plt.show()
 
-def compare_decay_factors():
-    static = run_experiment(0.1, 0.1, 0.95)
-    dynamic_099 = run_experiment(0.1, 0.1, 0.95, 0.99)
-    dynamic_095 = run_experiment(0.1, 0.1, 0.95, 0.95)
-    dynamic_090 = run_experiment(0.1, 0.1, 0.95, 0.9)
-
-    plt.plot(savgol_filter(static, 51, 3), label="Static")
-    plt.plot(savgol_filter(dynamic_099, 51, 3), label="Decaying factor=0.99")
-    plt.plot(savgol_filter(dynamic_095, 51, 3), label="Decaying factor=0.95")
-    plt.plot(savgol_filter(dynamic_090, 51, 3), label="Decaying factor=0.90")
+def compare_decay_factors(epochs=10000):
+    static = run_experiment(0.1, 0.1, 0.95, epochs=epochs)
+    dynamic_099995 = run_experiment(0.1, 0.1, 0.95, epochs=epochs, decay_factor=0.99995)
+    dynamic_09995 = run_experiment(0.1, 0.1, 0.95, epochs=epochs, decay_factor=0.9995)
+    dynamic_0995 = run_experiment(0.1, 0.1, 0.95,  epochs=epochs, decay_factor=0.995)
+    dynamic_095 = run_experiment(0.1, 0.1, 0.95,  epochs=epochs, decay_factor=0.95)
+    dynamic_090 = run_experiment(0.1, 0.1, 0.95,  epochs=epochs, decay_factor=0.90)
+    plt.plot(static, label="Static")
+    plt.plot(dynamic_099995, label="Decaying factor=0.9995")
+    plt.plot(dynamic_09995, label="Decaying factor=0.9995")
+    plt.plot(dynamic_0995, label="Decaying factor=0.995")
+    plt.plot(dynamic_095, label="Decaying factor=0.95")
+    plt.plot(dynamic_090, label="Decaying factor=0.9")
 
     plt.legend()
     plt.title("Winrate of different decaying factors")
@@ -50,62 +50,34 @@ def compare_decay_factors():
     plt.ylabel("Winrate %")
     plt.show()
 
+def compare_to_random_agent(epochs = 10000):
+    trained = run_experiment(0.1, 0.1, 0.95, epochs=epochs, decay_factor=0.9995)
+    random_agent = run_experiment(0.1, 1, 0.95, epochs=epochs)
+
+    plt.plot(trained, label="Learning agent")
+    plt.plot(random_agent, label="Random agent")
+
+    plt.legend()
+    plt.title("Winrate compared to random agent")
+    plt.xlabel("Game Number")
+    plt.ylabel("Winrate %")
+    plt.show()
 
 
-
-def run_experiment(alpha, epsilon, gamma, decay_factor=0):
+def run_experiment(alpha, epsilon, gamma, epochs=20000, decay_factor=1):
     pool = mp.Pool(num_workers)
     processes = []
-    for i in range(10):
-        if decay_factor != 0:
-            processes.append(pool.apply_async(train_agent_decay, args=(alpha, epsilon, gamma, decay_factor)))
-        else:
-            processes.append(pool.apply_async(train_agent_static, args=(alpha, epsilon, gamma)))
+    for i in range(6):
+        processes.append(pool.apply_async(Agent(alpha, epsilon, gamma, decay_factor).train, args=(epochs,)))
             
-    results = np.zeros(5000, int)
+    results = np.zeros(epochs, float)
     pool.close()
     pool.join()
 
-    for i in range(10):
+    for i in range(6):
         results += processes[i].get()
     
-    return results
-
-
-
-def train_agent_decay(alpha, epsilon, gamma, decay_factor):
-    agent = Agent(alpha, epsilon, gamma)
-    outcomes = np.empty(5000, int)
-    for i in range(5000):
-        outcomes[i] = play_game(agent)
-        if outcomes[i]:
-            agent.decay_epsilon(decay_factor)
-    
-    winrate = (sum(outcomes) / len(outcomes)) * 100
-    print("Job for alpha={alpha}, decaying epsilon={epsilon}, gamma={gamma} finished with an average winrate of {winrate}%".format(alpha=alpha, epsilon=epsilon, gamma=gamma, winrate=winrate))
-    outcomes *= 10 # Multiply by 10 to get percentages
-    return outcomes
-
-def train_agent_static(alpha, epsilon, gamma):
-    agent = Agent(alpha, epsilon, gamma)
-    outcomes = np.empty(5000, int)
-    for i in range(5000):
-        outcomes[i] = play_game(agent)
-    
-    winrate = (sum(outcomes) / len(outcomes)) * 100
-    print("Job for alpha={alpha}, static epsilon={epsilon}, gamma={gamma} finished with an average winrate of {winrate}%".format(alpha=alpha, epsilon=epsilon, gamma=gamma, winrate=winrate))
-    outcomes *= 10 # Multiply by 10 to get percentages
-    return outcomes
-
-
-def play_game(agent):
-    board = Board('8/8/8/2k5/8/6R1/3K4/8')
-    while True:
-        result = agent.play_turn(board)
-        if result == "1-0":
-            return 1
-        elif result == "1/2-1/2":
-            return 0
+    return results / 6
    
 
 

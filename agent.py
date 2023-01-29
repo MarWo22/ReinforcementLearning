@@ -1,12 +1,36 @@
 import chess
 import random
+from board import Board
+import numpy as np
 
 class Agent:
-    def __init__(self, alpha, epsilon, gamma):
+    def __init__(self, alpha, epsilon, gamma, decay_factor = 1):
         self.alpha = alpha
         self.epsilon = epsilon
         self.gamma = gamma
+        self.decay_factor = decay_factor
         self.q_values = {}
+
+
+
+    def train(self, epochs):
+        print("Started process with {epochs} epochs with epsilon={epsilon}, alpha={alpha}, gamma={gamma}, decay_factor={decay_factor}".format(epochs=epochs, epsilon=self.epsilon, alpha=self.alpha, gamma=self.gamma, decay_factor=self.decay_factor))
+        wins = 0
+        winrates = np.empty(epochs)
+        for epoch in range(epochs):
+
+            board = Board()
+            result = "*"
+            while result == "*":
+                result = self.play_turn(board)
+
+            if result == "1-0":
+                self.decay_epsilon(self.decay_factor)
+                wins += 1
+
+            winrates[epoch] = (wins / (epoch + 1)) * 100
+        print("Finished process with {epochs} epochs with epsilon={epsilon}, alpha={alpha}, gamma={gamma}, decay_factor={decay_factor} with a average winrate of {winrate}%".format(epochs=epochs, epsilon=self.epsilon, alpha=self.alpha, gamma=self.gamma, decay_factor=self.decay_factor, winrate=winrates[epochs-1]))
+        return winrates
 
     def play_turn(self, board) -> str:
         curr_state = board.state()
@@ -49,7 +73,7 @@ class Agent:
         elif outcome == "1-0":
             return 100
         else:
-            return (10 - (board.kings_distance() + board.black_king_border_distance())) / 10
+            return (10 - (board.kings_distance() + board.black_king_border_distance()))
 
     def _get_move(self, board) -> chess.Move:
 
